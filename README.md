@@ -1,5 +1,5 @@
 # Tough Bible Quiz
 
-https://kchikuse.github.io/bible-quiz
+https://kchikuse.github.io/quiz
 
-https://kchikuse.github.io/bible-quiz/tests/SpecRunner.html
+https://kchikuse.github.io/quiz/tests/SpecRunner.html
