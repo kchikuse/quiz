@@ -6,8 +6,7 @@
     "author": "K Chikuse",
     "background_color": "#ffffff",
     "theme_color": "#3a88cb",
-    "start_url": "/",
-    "scope": ".",
+    "start_url": "https://kchikuse.github.io/quiz",
     "lang": "en_US",
     "icons": [
         {
