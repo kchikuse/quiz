@@ -63,7 +63,7 @@ function gameover() {
 
 async function download() {
     loading(true);
-    const response = await fetch(`https://q.chikuse.co.za/apiv2/questions?seed=${game.seed}&index=${game.index}`);
+    const response = await fetch(`https://gurujah.000webhostapp.com/apiv2/questions?seed=${game.seed}&index=${game.index}`);
     loading(false);
 
     if (response.ok) {
