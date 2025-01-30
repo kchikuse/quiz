@@ -63,7 +63,7 @@ function gameover() {
 
 async function download() {
     loading(true);
-    const response = await fetch(`http://quizapi.unaux.com/questions?seed=${game.seed}&index=${game.index}`);
+    const response = await fetch(`https://quizapi.tiiny.io?seed=${game.seed}&index=${game.index}`);
     loading(false);
 
     if (response.ok) {
