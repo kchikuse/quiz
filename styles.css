@@ -231,7 +231,7 @@ main {
   overflow: hidden;
   transform-origin: center;
   transform-style: flat;
-  backface-visibility: hidden; 
+  backface-visibility: hidden;
   will-change: transform;
   isolation: isolate;
   animation: fadeSlideIn 0.4s ease-out forwards;
@@ -288,7 +288,7 @@ main {
   z-index: 80;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: 0;
   animation: fadeIn 0.4s ease-out;
 }
 .game-over-card {
@@ -378,7 +378,139 @@ main {
   background-color: var(--warning-dark);
 }
 
-/* --- Animations --- */
+/* Achievement Toast Notification */
+.achievement-toast {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--card-bg);
+  color: var(--text-color-dark);
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  border-radius: var(--border-radius);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  z-index: 95;
+  opacity: 0;
+  transition: all 0.4s ease;
+  min-width: 280px;
+  max-width: 90%;
+}
+
+.achievement-toast.show {
+  bottom: 30px;
+  opacity: 1;
+}
+
+.achievement-icon {
+  font-size: 2.2em;
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.achievement-content {
+  flex-grow: 1;
+}
+
+.achievement-title {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.achievement-name {
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.achievement-description {
+  font-size: 0.8em;
+  opacity: 0.9;
+}
+
+.achievements-container {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  width: 100%;
+  animation: fadeIn 0.6s 0.3s both;
+}
+
+.achievements-title {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.achievements-progress {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.achievements-progress-bar {
+  height: 100%;
+  background-color: var(--primary-color);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.progress-text {
+  font-size: 0.8em;
+  color: var(--secondary-dark);
+}
+
+.no-achievements {
+  text-align: center;
+  font-size: 0.9em;
+  color: var(--secondary-dark);
+  font-style: italic;
+  padding: 15px 0;
+}
+
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.achievement-badge {
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  padding: 8px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  box-shadow: 0 2px 4px var(--shadow-light);
+}
+
+.achievement-badge:hover {
+  transform: translateY(-3px);
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.badge-icon {
+  font-size: 1.5em;
+  margin-bottom: 5px;
+}
+
+.badge-title {
+  font-size: 0.7em;
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -410,6 +542,7 @@ main {
     opacity: 1;
   }
 }
+
 @keyframes zoomIn {
   from {
     opacity: 0;
@@ -420,11 +553,13 @@ main {
     transform: scale(1);
   }
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
+
 @keyframes starPulse {
   0%,
   100% {
@@ -438,6 +573,35 @@ main {
 }
 
 /* --- Responsive --- */
+@media screen and (max-width: 500px) {
+  .achievements-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .achievement-toast {
+    min-width: unset;
+    width: 90%;
+  }
+}
+
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .achievements-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .achievements-title {
+    margin-bottom: 5px;
+  }
+
+  .achievements-progress {
+    margin-bottom: 8px;
+  }
+
+  .achievement-badge {
+    padding: 5px 3px;
+  }
+}
+
 @media screen and (min-width: 600px) {
   .answers-container {
     grid-template-columns: 1fr 1fr;

@@ -27,16 +27,19 @@ const CACHE_KEY = "bible_quiz_game_state_v2";
 const QUESTIONS_PER_LEVEL = 5;
 const API_URL = `https://quizapi.tiiny.io`;
 const MIN_DELAY_BETWEEN_QUESTIONS = 1200;
+const ACHIEVEMENT_DISPLAY_TIME = 5000;
 
 const gameState = {
   seed: Date.now(),
   index: 0,
   counter: 0,
   over: false,
-  wins: 0,
   questions: [],
-  winProcessed: false, // Add a flag to track if win has been processed
 };
+
+let achievementToastTimeout = null;
+let currentLevelQuestionCount = 0;
+let isTransitioning = false;
 
 function getCurrentQuestion() {
   return gameState.questions[gameState.counter];
@@ -59,13 +62,84 @@ function answerQuestion(questionId, answerId) {
 
   const isCorrect = correctAnswer.id == answerId;
   question.correct = isCorrect;
+
+  // Update achievement stats
+  const isLastInLevel =
+    (gameState.counter % QUESTIONS_PER_LEVEL) + 1 === QUESTIONS_PER_LEVEL;
+  const isLevelComplete = isLastInLevel;
+
+  // Check if this level is perfect (all questions correct)
+  let isLevelPerfect = false;
+  if (isLevelComplete) {
+    const levelStartIndex =
+      Math.floor(gameState.counter / QUESTIONS_PER_LEVEL) * QUESTIONS_PER_LEVEL;
+    isLevelPerfect = true;
+
+    for (let i = levelStartIndex; i <= gameState.counter; i++) {
+      if (
+        i < getTotalQuestions() &&
+        (!gameState.questions[i] || gameState.questions[i].correct !== true)
+      ) {
+        isLevelPerfect = false;
+        break;
+      }
+    }
+  }
+
+  achievementManager.updateQuestionStats(
+    isCorrect,
+    isLevelComplete,
+    isLevelPerfect
+  );
+
+  if (isLevelComplete) {
+    // Record level attempt for comeback achievement
+    const levelId = `level_${gameState.index}_${Math.floor(
+      gameState.counter / QUESTIONS_PER_LEVEL
+    )}`;
+    achievementManager.recordLevelAttempt(levelId, isLevelPerfect);
+  }
+
+  const newAchievements = achievementManager.checkAchievements();
+  if (newAchievements.length > 0) {
+    displayAchievementNotification(newAchievements[0]);
+  }
+
   return isCorrect;
+}
+
+function displayAchievementNotification(achievement) {
+  if (achievementToastTimeout) {
+    clearTimeout(achievementToastTimeout);
+  }
+
+  let achievementToast = document.getElementById("achievementToast");
+  if (!achievementToast) {
+    achievementToast = document.createElement("div");
+    achievementToast.id = "achievementToast";
+    achievementToast.className = "achievement-toast";
+    document.body.appendChild(achievementToast);
+  }
+
+  achievementToast.innerHTML = `
+    <div class="achievement-icon">${achievement.icon}</div>
+    <div class="achievement-content">
+      <div class="achievement-title">Achievement Unlocked!</div>
+      <div class="achievement-name">${achievement.title}</div>
+      <div class="achievement-description">${achievement.description}</div>
+    </div>
+  `;
+
+  achievementToast.classList.add("show");
+
+  achievementToastTimeout = setTimeout(() => {
+    achievementToast.classList.remove("show");
+  }, ACHIEVEMENT_DISPLAY_TIME);
 }
 
 function nextQuestion() {
   if (!gameState.over) {
     gameState.counter++;
-    gameState.winProcessed = false;
     gameState.over = gameState.counter >= getTotalQuestions();
   }
 }
@@ -74,8 +148,8 @@ function resetGame() {
   gameState.questions = [];
   gameState.counter = 0;
   gameState.over = false;
-  gameState.winProcessed = false;
   gameState.index++;
+  achievementManager.resetWinProcessed();
 }
 
 function saveGameState() {
@@ -85,8 +159,6 @@ function saveGameState() {
       index: gameState.index,
       seed: gameState.seed,
       over: gameState.over,
-      wins: gameState.wins,
-      winProcessed: gameState.winProcessed,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(dataToSave));
 
@@ -108,8 +180,6 @@ function loadGameState() {
       gameState.index = l.index || 0;
       gameState.counter = l.counter || 0;
       gameState.over = l.over || false;
-      gameState.wins = l.wins || 0;
-      gameState.winProcessed = l.winProcessed || false;
 
       if (gameState.over) {
         const savedScore = sessionStorage.getItem("lastGameScore");
@@ -134,20 +204,6 @@ function loadGameState() {
     gameState.seed = Date.now();
   }
 }
-
-let currentLevelQuestionCount = 0;
-let isTransitioning = false;
-
-const WISDOM_TITLES = {
-  1: "Seeker of Truth",
-  3: "Discerner of Spirits",
-  9: "Steward of Knowledge",
-  12: "Counselor of Wisdom",
-  15: "Master of Parables",
-  20: "Sage of Scripture",
-  30: "Prophet of Insight",
-  50: "Illuminated Elder",
-};
 
 function showElement(element) {
   if (element) element.removeAttribute("cloak");
@@ -251,6 +307,7 @@ async function fetchQuestions() {
     ) {
       throw new Error("No questions received");
     }
+
     gameState.seed = data.seed;
     gameState.index = data.index;
     gameState.questions = data.questions;
@@ -337,11 +394,8 @@ function handleGameOver() {
   // Check for win condition - all questions answered correctly
   const isWin = getScore() === getTotalQuestions() && getTotalQuestions() > 0;
 
-  // Only increment wins if the win hasn't been processed yet and player won
-  if (isWin && !gameState.winProcessed) {
-    gameState.wins++;
-    gameState.winProcessed = true;
-  }
+  // Process win using achievement manager
+  const totalWins = achievementManager.processWin(isWin);
 
   gameState.over = true;
   saveGameState();
@@ -349,10 +403,17 @@ function handleGameOver() {
   hideElement(gameScreenElement);
   showElement(gameOverScreenElement);
   gameOverScreenElement.dataset.win = isWin;
-  gameOverTextElement.textContent = getGameOverText(isWin);
 
-  if (getTotalQuestions() > 0) {
-    gameOverScoreElement.textContent = `${getScore()} / ${getTotalQuestions()}`;
+  // Use achievement manager to get game over text
+  const score = getScore();
+  const total = getTotalQuestions();
+  gameOverTextElement.textContent = achievementManager.getGameOverText(
+    score,
+    total
+  );
+
+  if (total > 0) {
+    gameOverScoreElement.textContent = `${score} / ${total}`;
   } else {
     const savedScore = sessionStorage.getItem("lastGameScore");
     const savedTotal = sessionStorage.getItem("lastGameTotal");
@@ -363,16 +424,8 @@ function handleGameOver() {
     }
   }
 
-  let achievedTitle = "";
-  const sortedWinThresholds = Object.keys(WISDOM_TITLES)
-    .map(Number)
-    .sort((a, b) => b - a);
-  for (const t of sortedWinThresholds) {
-    if (gameState.wins >= t) {
-      achievedTitle = WISDOM_TITLES[t];
-      break;
-    }
-  }
+  // Get wisdom title from achievement manager
+  const achievedTitle = achievementManager.getWisdomTitle();
   if (achievedTitle) {
     rewardTitleElement.textContent = achievedTitle;
     showElement(rewardTitleElement);
@@ -380,12 +433,16 @@ function handleGameOver() {
     hideElement(rewardTitleElement);
   }
 
-  if (gameState.wins > 0) {
+  if (totalWins > 0) {
     showElement(winStreakContainerElement);
-    winCountElement.textContent = `Total Wins: ${gameState.wins}`;
+    winCountElement.textContent = `Total Wins: ${totalWins}`;
   } else {
     hideElement(winStreakContainerElement);
   }
+
+  // Display achievements
+  updateAchievementsDisplay();
+
   updateShareButtonVisibility();
   isTransitioning = false;
 }
@@ -403,26 +460,65 @@ function handleReplay() {
   fetchQuestions();
 }
 
-function getGameOverText(isWin) {
-  if (isWin) {
-    return "Level Cleared!";
+function updateAchievementsDisplay() {
+  let achievementsContainer = document.getElementById("achievementsContainer");
+  if (!achievementsContainer) {
+    achievementsContainer = document.createElement("div");
+    achievementsContainer.id = "achievementsContainer";
+    achievementsContainer.className = "achievements-container";
+
+    const buttonsContainer = document.querySelector(".game-over-buttons");
+    gameOverScreenElement
+      .querySelector(".game-over-card")
+      .insertBefore(achievementsContainer, buttonsContainer);
   }
 
-  const diff = getTotalQuestions() - getScore();
+  const unlockedAchievements = achievementManager.getUnlockedAchievements();
+  const progress = achievementManager.getProgress();
 
-  if (diff === 1) {
-    return "So Close!";
+  if (unlockedAchievements.length === 0) {
+    achievementsContainer.innerHTML = `
+      <div class="achievements-title">Achievements (0%)</div>
+      <div class="no-achievements">Complete challenges to earn badges!</div>
+    `;
+    return;
   }
 
-  if (diff === 2) {
-    return "Almost!";
-  }
+  const categories = {
+    progress: { name: "Progress", achievements: [] },
+    accuracy: { name: "Accuracy", achievements: [] },
+    perfect: { name: "Perfect Levels", achievements: [] },
+    challenge: { name: "Challenges", achievements: [] },
+  };
 
-  return "Level Failed";
-}
+  unlockedAchievements.forEach((achievement) => {
+    if (categories[achievement.category]) {
+      categories[achievement.category].achievements.push(achievement);
+    }
+  });
 
-function checkOnlineStatus() {
-  /* Optional */
+  let achievementsHTML = `
+    <div class="achievements-title">Achievements (${progress.percentage}%)</div>
+    <div class="achievements-progress">
+      <div class="progress-bar-container">
+        <div class="achievements-progress-bar" style="width: ${progress.percentage}%"></div>
+      </div>
+      <div class="progress-text">${progress.unlocked}/${progress.total}</div>
+    </div>
+    <div class="achievements-grid">
+  `;
+
+  unlockedAchievements.forEach((achievement) => {
+    achievementsHTML += `
+      <div class="achievement-badge" title="${achievement.title}: ${achievement.description}">
+        <div class="badge-icon">${achievement.icon}</div>
+        <div class="badge-title">${achievement.title}</div>
+      </div>
+    `;
+  });
+
+  achievementsHTML += `</div>`;
+  achievementsContainer.innerHTML = achievementsHTML;
 }
 
 function shuffleArray(array) {
@@ -461,15 +557,13 @@ function addEventListeners() {
   answerButtonElements.forEach((button) => {
     if (button) button.onclick = handleAnswerSelection;
   });
-  window.addEventListener("online", checkOnlineStatus);
-  window.addEventListener("offline", checkOnlineStatus);
   window.addEventListener("pagehide", saveGameState);
 }
 
 function initialize() {
   loadGameState();
-  checkOnlineStatus();
   addEventListeners();
+  achievementManager.checkAchievements();
   if (gameState.over) {
     handleGameOver();
   } else {
