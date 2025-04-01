@@ -243,7 +243,6 @@ main {
 }
 .answer-button:hover:not(:disabled) {
   border-color: var(--primary-color);
-  color: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: 0 5px 10px var(--shadow-light);
 }
