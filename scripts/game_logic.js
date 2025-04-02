@@ -154,12 +154,19 @@ function resetGame() {
 
 function saveGameState() {
   try {
+    const questionResults = gameState.questions.map(q => ({
+      id: q.id,
+      correct: q.correct
+    }));
+    
     const dataToSave = {
       counter: gameState.counter,
       index: gameState.index,
       seed: gameState.seed,
       over: gameState.over,
+      questionResults: questionResults
     };
+    
     localStorage.setItem(CACHE_KEY, JSON.stringify(dataToSave));
 
     if (gameState.over) {
@@ -180,6 +187,11 @@ function loadGameState() {
       gameState.index = l.index || 0;
       gameState.counter = l.counter || 0;
       gameState.over = l.over || false;
+      
+      // Store question results to restore after fetch
+      if (l.questionResults && Array.isArray(l.questionResults)) {
+        gameState.questionResults = l.questionResults;
+      }
 
       if (gameState.over) {
         const savedScore = sessionStorage.getItem("lastGameScore");
@@ -284,6 +296,10 @@ async function fetchQuestions() {
   isTransitioning = true;
   setLoading(true);
   hideElement(errorScreenElement);
+  
+  // Store the previous question results to restore after fetch
+  const savedQuestionResults = gameState.questionResults || [];
+  
   try {
     const response = await fetch(
       `${API_URL}?seed=${gameState.seed}&index=${gameState.index}`
@@ -311,6 +327,17 @@ async function fetchQuestions() {
     gameState.seed = data.seed;
     gameState.index = data.index;
     gameState.questions = data.questions;
+    
+    // Restore previous answer results if available
+    if (savedQuestionResults.length > 0) {
+      for (let i = 0; i < gameState.questions.length; i++) {
+        const savedResult = savedQuestionResults.find(r => r.id === gameState.questions[i].id);
+        if (savedResult && i < gameState.counter) {
+          gameState.questions[i].correct = savedResult.correct;
+        }
+      }
+    }
+    
     saveGameState();
     currentLevelQuestionCount = gameState.counter % QUESTIONS_PER_LEVEL;
     showElement(gameScreenElement);
