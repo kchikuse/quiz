@@ -286,52 +286,59 @@ main {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(5px);
   z-index: 80;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   animation: fadeIn 0.4s ease-out;
+  overflow-y: auto;
 }
 .game-over-card {
   background-color: var(--card-bg);
   color: var(--text-color-dark);
-  padding: 35px;
+  padding: 25px 20px;
   border-radius: var(--border-radius);
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  width: 90%;
+  width: 92%;
   max-width: 450px;
+  height: auto;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
   transform: scale(0.9);
   opacity: 0;
   animation: zoomIn 0.4s 0.1s ease-out forwards;
+  overflow-y: auto;
 }
 .game-over-card h2 {
-  font-size: 2em;
-  margin-bottom: 10px;
+  font-size: 1.8em;
+  margin-bottom: 5px;
   color: var(--primary-dark);
   font-weight: 600;
 }
 .reward-title {
-  font-size: 1.1em;
+  font-size: 1em;
   font-weight: 500;
   color: var(--warning-dark);
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   min-height: 1.2em; /* Prevent layout shift */
 }
 .final-score {
-  margin-bottom: 15px;
-  font-size: 1.2em;
+  margin-bottom: 10px;
+  font-size: 1.1em;
 }
 #gameOverScore {
   font-weight: 700;
-  font-size: 2.2em;
+  font-size: 2em;
   color: var(--primary-color);
   display: block;
   margin-top: 0;
 }
 .win-streak-container {
-  font-size: 1.8em;
+  font-size: 1.6em;
   color: var(--gold-color);
-  margin-bottom: 25px;
+  margin-bottom: 15px;
   animation: fadeIn 0.5s 0.4s both;
   display: flex;
   align-items: center;
@@ -350,8 +357,14 @@ main {
 .game-over-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: auto;
 }
 .game-over-buttons button {
   background-color: var(--primary-color);
@@ -363,7 +376,8 @@ main {
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.1s ease;
   font-weight: 600;
-  width: 100%;
+  width: 80%;
+  max-width: 250px;
 }
 .game-over-buttons button:hover {
   background-color: var(--primary-dark);
@@ -378,76 +392,26 @@ main {
   background-color: var(--warning-dark);
 }
 
-/* Achievement Toast Notification */
-.achievement-toast {
-  position: fixed;
-  bottom: -100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: var(--card-bg);
-  color: var(--text-color-dark);
-  display: flex;
-  align-items: center;
-  padding: 15px 20px;
-  border-radius: var(--border-radius);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  z-index: 95;
-  opacity: 0;
-  transition: all 0.4s ease;
-  min-width: 280px;
-  max-width: 90%;
-}
-
-.achievement-toast.show {
-  bottom: 30px;
-  opacity: 1;
-}
-
-.achievement-icon {
-  font-size: 2.2em;
-  margin-right: 15px;
-  flex-shrink: 0;
-}
-
-.achievement-content {
-  flex-grow: 1;
-}
-
-.achievement-title {
-  font-size: 0.8em;
-  font-weight: 600;
-  color: var(--primary-color);
-}
-
-.achievement-name {
-  font-weight: 600;
-  margin-bottom: 3px;
-}
-
-.achievement-description {
-  font-size: 0.8em;
-  opacity: 0.9;
-}
-
 .achievements-container {
-  margin-top: 15px;
-  margin-bottom: 15px;
+  margin: 10px 0 15px;
   width: 100%;
   animation: fadeIn 0.6s 0.3s both;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .achievements-title {
   font-size: 0.9em;
   font-weight: 600;
   color: var(--primary-dark);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   text-align: left;
 }
 
 .achievements-progress {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   gap: 10px;
 }
 
@@ -468,20 +432,23 @@ main {
   font-size: 0.9em;
   color: var(--secondary-dark);
   font-style: italic;
-  padding: 15px 0;
+  padding: 10px 0;
 }
 
 .achievements-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 10px;
+  overflow-y: auto;
+  max-height: 30vh;
+  padding-right: 5px;
 }
 
 .achievement-badge {
   background-color: rgba(255, 255, 255, 0.7);
   border-radius: 8px;
-  padding: 8px 5px;
+  aspect-ratio: 1/1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -489,6 +456,7 @@ main {
   cursor: help;
   transition: transform 0.2s ease, background-color 0.2s ease;
   box-shadow: 0 2px 4px var(--shadow-light);
+  padding: 5px 3px;
 }
 
 .achievement-badge:hover {
@@ -497,18 +465,19 @@ main {
 }
 
 .badge-icon {
-  font-size: 1.5em;
-  margin-bottom: 5px;
+  font-size: 1.4em;
+  margin-bottom: 3px;
 }
 
 .badge-title {
-  font-size: 0.7em;
+  font-size: 0.65em;
   font-weight: 600;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
+  line-height: 1.2;
 }
 
 @keyframes fadeSlideIn {
@@ -572,7 +541,82 @@ main {
   }
 }
 
-/* --- Responsive --- */
+@media screen and (max-height: 700px) {
+  .game-over-card {
+    padding: 15px;
+  }
+  
+  .game-over-card h2 {
+    font-size: 1.5em;
+    margin-bottom: 3px;
+  }
+  
+  .reward-title {
+    font-size: 0.9em;
+    margin-bottom: 10px;
+  }
+  
+  #gameOverScore {
+    font-size: 1.8em;
+  }
+  
+  .achievements-grid {
+    max-height: 25vh;
+  }
+  
+  .game-over-buttons button {
+    padding: 10px;
+  }
+}
+
+@media screen and (max-width: 380px) {
+  .achievements-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .badge-icon {
+    font-size: 1.2em;
+  }
+}
+
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .game-over-card {
+    padding: 12px;
+    max-width: 90%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  
+  .game-over-header {
+    width: 40%;
+    padding-right: 15px;
+    text-align: left;
+  }
+  
+  .achievements-container {
+    width: 60%;
+    margin-top: 0;
+  }
+  
+  .achievements-grid {
+    max-height: 20vh;
+    grid-template-columns: repeat(5, 1fr);
+  }
+  
+  .game-over-buttons {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  
+  .game-over-buttons button {
+    width: 40%;
+  }
+}
+
 @media screen and (max-width: 500px) {
   .achievements-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -581,24 +625,6 @@ main {
   .achievement-toast {
     min-width: unset;
     width: 90%;
-  }
-}
-
-@media screen and (orientation: landscape) and (max-height: 500px) {
-  .achievements-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-
-  .achievements-title {
-    margin-bottom: 5px;
-  }
-
-  .achievements-progress {
-    margin-bottom: 8px;
-  }
-
-  .achievement-badge {
-    padding: 5px 3px;
   }
 }
 

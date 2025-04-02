@@ -27,7 +27,7 @@ const CACHE_KEY = "bible_quiz_game_state_v2";
 const QUESTIONS_PER_LEVEL = 5;
 const API_URL = `https://quizapi.tiiny.io`;
 const MIN_DELAY_BETWEEN_QUESTIONS = 1200;
-const ACHIEVEMENT_DISPLAY_TIME = 5000;
+const ACHIEVEMENT_DISPLAY_TIME = 6000;
 
 const gameState = {
   seed: Date.now(),
@@ -394,7 +394,6 @@ function handleGameOver() {
   // Check for win condition - all questions answered correctly
   const isWin = getScore() === getTotalQuestions() && getTotalQuestions() > 0;
 
-  // Process win using achievement manager
   const totalWins = achievementManager.processWin(isWin);
 
   gameState.over = true;
@@ -404,46 +403,147 @@ function handleGameOver() {
   showElement(gameOverScreenElement);
   gameOverScreenElement.dataset.win = isWin;
 
-  // Use achievement manager to get game over text
+  // Clear any existing content in the game-over-card
+  const gameOverCard = gameOverScreenElement.querySelector('.game-over-card');
+  gameOverCard.innerHTML = '';
+  
+  const headerSection = document.createElement('div');
+  headerSection.className = 'game-over-header';
+  
   const score = getScore();
   const total = getTotalQuestions();
-  gameOverTextElement.textContent = achievementManager.getGameOverText(
-    score,
-    total
-  );
-
+  const gameOverText = document.createElement('h2');
+  gameOverText.textContent = achievementManager.getGameOverText(score, total);
+  headerSection.appendChild(gameOverText);
+  
+  // Add wisdom title if available
+  const achievedTitle = achievementManager.getWisdomTitle();
+  if (achievedTitle) {
+    const rewardTitle = document.createElement('div');
+    rewardTitle.className = 'reward-title';
+    rewardTitle.textContent = achievedTitle;
+    headerSection.appendChild(rewardTitle);
+  }
+  
+  // Add score display
+  const finalScore = document.createElement('div');
+  finalScore.className = 'final-score';
+  
+  const gameScoreText = document.createElement('span');
+  gameScoreText.id = 'gameOverScoreText';
+  gameScoreText.textContent = 'Score';
+  finalScore.appendChild(gameScoreText);
+  
+  const gameScore = document.createElement('span');
+  gameScore.id = 'gameOverScore';
+  
   if (total > 0) {
-    gameOverScoreElement.textContent = `${score} / ${total}`;
+    gameScore.textContent = `${score} / ${total}`;
   } else {
     const savedScore = sessionStorage.getItem("lastGameScore");
     const savedTotal = sessionStorage.getItem("lastGameTotal");
     if (savedScore && savedTotal) {
-      gameOverScoreElement.textContent = `${savedScore} / ${savedTotal}`;
+      gameScore.textContent = `${savedScore} / ${savedTotal}`;
     } else {
-      gameOverScoreElement.textContent = `0 / 0`;
+      gameScore.textContent = `0 / 0`;
     }
   }
-
-  // Get wisdom title from achievement manager
-  const achievedTitle = achievementManager.getWisdomTitle();
-  if (achievedTitle) {
-    rewardTitleElement.textContent = achievedTitle;
-    showElement(rewardTitleElement);
-  } else {
-    hideElement(rewardTitleElement);
-  }
-
+  
+  finalScore.appendChild(gameScore);
+  headerSection.appendChild(finalScore);
+  
+  // Add win streak if applicable
   if (totalWins > 0) {
-    showElement(winStreakContainerElement);
-    winCountElement.textContent = `Total Wins: ${totalWins}`;
-  } else {
-    hideElement(winStreakContainerElement);
+    const winStreakContainer = document.createElement('div');
+    winStreakContainer.className = 'win-streak-container';
+    winStreakContainer.id = 'winStreakContainer';
+    
+    const star = document.createElement('span');
+    star.className = 'star';
+    star.textContent = '⭐️';
+    winStreakContainer.appendChild(star);
+    
+    const winCount = document.createElement('span');
+    winCount.id = 'winCount';
+    winCount.textContent = `Total Wins: ${totalWins}`;
+    winStreakContainer.appendChild(winCount);
+    
+    headerSection.appendChild(winStreakContainer);
   }
-
-  // Display achievements
-  updateAchievementsDisplay();
-
-  updateShareButtonVisibility();
+  
+  gameOverCard.appendChild(headerSection);
+  
+  // Add achievements section
+  const achievementsContainer = document.createElement('div');
+  achievementsContainer.id = 'achievementsContainer';
+  achievementsContainer.className = 'achievements-container';
+  
+  const unlockedAchievements = achievementManager.getUnlockedAchievements();
+  const progress = achievementManager.getProgress();
+  
+  if (unlockedAchievements.length === 0) {
+    achievementsContainer.innerHTML = `
+      <div class="achievements-title">Achievements (0%)</div>
+      <div class="no-achievements">Complete challenges to earn badges!</div>
+    `;
+  } else {
+    let achievementsHTML = `
+      <div class="achievements-title">Achievements (${progress.percentage}%)</div>
+      <div class="achievements-progress">
+        <div class="progress-bar-container">
+          <div class="achievements-progress-bar" style="width: ${progress.percentage}%"></div>
+        </div>
+        <div class="progress-text">${progress.unlocked}/${progress.total}</div>
+      </div>
+      <div class="achievements-grid">
+    `;
+    
+    unlockedAchievements.forEach((achievement) => {
+      achievementsHTML += `
+        <div class="achievement-badge" title="${achievement.title}: ${achievement.description}">
+          <div class="badge-icon">${achievement.icon}</div>
+          <div class="badge-title">${achievement.title}</div>
+        </div>
+      `;
+    });
+    
+    achievementsHTML += `</div>`;
+    achievementsContainer.innerHTML = achievementsHTML;
+  }
+  
+  gameOverCard.appendChild(achievementsContainer);
+  
+  const buttonsContainer = document.createElement('div');
+  buttonsContainer.className = 'game-over-buttons';
+  
+  const replayButton = document.createElement('button');
+  replayButton.id = 'replayButton';
+  replayButton.className = 'btn btn-primary';
+  replayButton.textContent = 'Play Again';
+  replayButton.onclick = handleReplay;
+  buttonsContainer.appendChild(replayButton);
+  
+  if (navigator.share) {
+    const shareButton = document.createElement('button');
+    shareButton.id = 'shareButton';
+    shareButton.className = 'btn btn-secondary'; 
+    shareButton.textContent = 'Share';
+    shareButton.onclick = async () => {
+      try {
+        await navigator.share({
+          title: "Bible Challenge",
+          text: "Take on this super tough Bible quiz!",
+          url: window.location.href,
+        });
+      } catch (e) {
+        if (e.name !== "AbortError") console.error(e);
+      }
+    };
+    buttonsContainer.appendChild(shareButton);
+  }
+  
+  gameOverCard.appendChild(buttonsContainer);
+  
   isTransitioning = false;
 }
 
@@ -553,7 +653,6 @@ function updateShareButtonVisibility() {
 
 function addEventListeners() {
   if (errorButtonElement) errorButtonElement.onclick = handleReplay;
-  if (replayButtonElement) replayButtonElement.onclick = handleReplay;
   answerButtonElements.forEach((button) => {
     if (button) button.onclick = handleAnswerSelection;
   });
