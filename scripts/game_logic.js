@@ -28,6 +28,7 @@ const QUESTIONS_PER_LEVEL = 5;
 const API_URL = `https://quizapi.tiiny.io`;
 const MIN_DELAY_BETWEEN_QUESTIONS = 1200;
 const ACHIEVEMENT_DISPLAY_TIME = 6000;
+const MULTIPLE_ACHIEVEMENT_DISPLAY_TIME = ACHIEVEMENT_DISPLAY_TIME / 2;
 
 const gameState = {
   seed: Date.now(),
@@ -37,9 +38,12 @@ const gameState = {
   questions: [],
 };
 
-let achievementToastTimeout = null;
 let currentLevelQuestionCount = 0;
 let isTransitioning = false;
+
+let achievementToastTimeout = null;
+let achievementQueue = [];
+let isDisplayingAchievement = false;
 
 function getCurrentQuestion() {
   return gameState.questions[gameState.counter];
@@ -102,7 +106,7 @@ function answerQuestion(questionId, answerId) {
 
   const newAchievements = achievementManager.checkAchievements();
   if (newAchievements.length > 0) {
-    displayAchievementNotification(newAchievements[0]);
+    queueAchievements(newAchievements);
   }
 
   return isCorrect;
@@ -646,6 +650,67 @@ function updateAchievementsDisplay() {
 
   achievementsHTML += `</div>`;
   achievementsContainer.innerHTML = achievementsHTML;
+}
+
+function queueAchievements(achievements) {
+  // Add all achievements to the queue
+  achievementQueue = achievementQueue.concat(achievements);
+  
+  // If we're not currently displaying an achievement, start the process
+  if (!isDisplayingAchievement) {
+    displayNextAchievement();
+  }
+}
+
+function displayNextAchievement() {
+  if (achievementQueue.length === 0) {
+    isDisplayingAchievement = false;
+    return;
+  }
+  
+  isDisplayingAchievement = true;
+  const achievement = achievementQueue.shift();
+  
+  // Use half time if there are more achievements in the queue
+  const displayTime = achievementQueue.length > 0 ? 
+    MULTIPLE_ACHIEVEMENT_DISPLAY_TIME : 
+    ACHIEVEMENT_DISPLAY_TIME;
+    
+  displayAchievementNotification(achievement, displayTime);
+  
+  // Schedule the next achievement display
+  achievementToastTimeout = setTimeout(() => {
+    displayNextAchievement();
+  }, displayTime);
+}
+
+function displayAchievementNotification(achievement, displayTime = ACHIEVEMENT_DISPLAY_TIME) {
+  if (achievementToastTimeout) {
+    clearTimeout(achievementToastTimeout);
+  }
+
+  let achievementToast = document.getElementById("achievementToast");
+  if (!achievementToast) {
+    achievementToast = document.createElement("div");
+    achievementToast.id = "achievementToast";
+    achievementToast.className = "achievement-toast";
+    document.body.appendChild(achievementToast);
+  }
+
+  achievementToast.innerHTML = `
+    <div class="achievement-icon">${achievement.icon}</div>
+    <div class="achievement-content">
+      <div class="achievement-title">Achievement Unlocked!</div>
+      <div class="achievement-name">${achievement.title}</div>
+      <div class="achievement-description">${achievement.description}</div>
+    </div>
+  `;
+
+  achievementToast.classList.add("show");
+
+  achievementToastTimeout = setTimeout(() => {
+    achievementToast.classList.remove("show");
+  }, displayTime);
 }
 
 function shuffleArray(array) {
