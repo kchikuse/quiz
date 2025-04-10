@@ -257,14 +257,6 @@ const ACHIEVEMENTS = {
   },
 };
 
-// Game over text messages based on performance
-const GAME_OVER_TEXTS = {
-  win: "Level Cleared!",
-  close: "So Close!",
-  almost: "Almost!",
-  fail: "Level Failed",
-};
-
 // Wisdom titles based on win count
 const WISDOM_TITLES = {
   1: "Seeker of Truth",
@@ -281,7 +273,6 @@ const WISDOM_TITLES = {
   100: "Faithful Steward of Scripture",
 };
 
-// Default stats structure
 const DEFAULT_STATS = {
   totalQuestionsAnswered: 0,
   totalCorrect: 0,
@@ -298,7 +289,6 @@ const DEFAULT_STATS = {
   winProcessed: false,
 };
 
-// Stats and achievement management
 class AchievementManager {
   constructor() {
     this.STORAGE_KEY = "bible_quiz_achievements_v1";
@@ -434,25 +424,6 @@ class AchievementManager {
       total,
       percentage: total > 0 ? Math.round((unlocked / total) * 100) : 0,
     };
-  }
-
-  // Get game over text based on score
-  getGameOverText(score, total) {
-    if (score === total && total > 0) {
-      return GAME_OVER_TEXTS.win;
-    }
-
-    const diff = total - score;
-
-    if (diff === 1) {
-      return GAME_OVER_TEXTS.close;
-    }
-
-    if (diff === 2) {
-      return GAME_OVER_TEXTS.almost;
-    }
-
-    return GAME_OVER_TEXTS.fail;
   }
 
   // Process a win and update win count

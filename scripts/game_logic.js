@@ -29,6 +29,7 @@ const API_URL = `https://quizapi.tiiny.io`;
 const MIN_DELAY_BETWEEN_QUESTIONS = 1200;
 const ACHIEVEMENT_DISPLAY_TIME = 6000;
 const MULTIPLE_ACHIEVEMENT_DISPLAY_TIME = ACHIEVEMENT_DISPLAY_TIME / 2;
+const THEME_STORAGE_KEY = "bible_quiz_theme";
 
 const gameState = {
   seed: Date.now(),
@@ -44,6 +45,11 @@ let isTransitioning = false;
 let achievementToastTimeout = null;
 let achievementQueue = [];
 let isDisplayingAchievement = false;
+let currentTheme =
+  localStorage.getItem(THEME_STORAGE_KEY) ||
+  (matchMedia && matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light");
 
 function getCurrentQuestion() {
   return gameState.questions[gameState.counter];
@@ -158,19 +164,19 @@ function resetGame() {
 
 function saveGameState() {
   try {
-    const questionResults = gameState.questions.map(q => ({
+    const questionResults = gameState.questions.map((q) => ({
       id: q.id,
-      correct: q.correct
+      correct: q.correct,
     }));
-    
+
     const dataToSave = {
       counter: gameState.counter,
       index: gameState.index,
       seed: gameState.seed,
       over: gameState.over,
-      questionResults: questionResults
+      questionResults: questionResults,
     };
-    
+
     localStorage.setItem(CACHE_KEY, JSON.stringify(dataToSave));
 
     if (gameState.over) {
@@ -191,7 +197,7 @@ function loadGameState() {
       gameState.index = l.index || 0;
       gameState.counter = l.counter || 0;
       gameState.over = l.over || false;
-      
+
       // Store question results to restore after fetch
       if (l.questionResults && Array.isArray(l.questionResults)) {
         gameState.questionResults = l.questionResults;
@@ -300,10 +306,10 @@ async function fetchQuestions() {
   isTransitioning = true;
   setLoading(true);
   hideElement(errorScreenElement);
-  
+
   // Store the previous question results to restore after fetch
   const savedQuestionResults = gameState.questionResults || [];
-  
+
   try {
     const response = await fetch(
       `${API_URL}?seed=${gameState.seed}&index=${gameState.index}`
@@ -331,17 +337,19 @@ async function fetchQuestions() {
     gameState.seed = data.seed;
     gameState.index = data.index;
     gameState.questions = data.questions;
-    
+
     // Restore previous answer results if available
     if (savedQuestionResults.length > 0) {
       for (let i = 0; i < gameState.questions.length; i++) {
-        const savedResult = savedQuestionResults.find(r => r.id === gameState.questions[i].id);
+        const savedResult = savedQuestionResults.find(
+          (r) => r.id === gameState.questions[i].id
+        );
         if (savedResult && i < gameState.counter) {
           gameState.questions[i].correct = savedResult.correct;
         }
       }
     }
-    
+
     saveGameState();
     currentLevelQuestionCount = gameState.counter % QUESTIONS_PER_LEVEL;
     showElement(gameScreenElement);
@@ -435,39 +443,31 @@ function handleGameOver() {
   gameOverScreenElement.dataset.win = isWin;
 
   // Clear any existing content in the game-over-card
-  const gameOverCard = gameOverScreenElement.querySelector('.game-over-card');
-  gameOverCard.innerHTML = '';
-  
-  const headerSection = document.createElement('div');
-  headerSection.className = 'game-over-header';
-  
+  const gameOverCard = gameOverScreenElement.querySelector(".game-over-card");
+  gameOverCard.innerHTML = "";
+
+  const headerSection = document.createElement("div");
+  headerSection.className = "game-over-header";
+
   const score = getScore();
   const total = getTotalQuestions();
-  const gameOverText = document.createElement('h2');
-  gameOverText.textContent = achievementManager.getGameOverText(score, total);
-  headerSection.appendChild(gameOverText);
-  
+
   // Add wisdom title if available
   const achievedTitle = achievementManager.getWisdomTitle();
   if (achievedTitle) {
-    const rewardTitle = document.createElement('div');
-    rewardTitle.className = 'reward-title';
+    const rewardTitle = document.createElement("div");
+    rewardTitle.className = "reward-title";
     rewardTitle.textContent = achievedTitle;
     headerSection.appendChild(rewardTitle);
   }
-  
+
   // Add score display
-  const finalScore = document.createElement('div');
-  finalScore.className = 'final-score';
-  
-  const gameScoreText = document.createElement('span');
-  gameScoreText.id = 'gameOverScoreText';
-  gameScoreText.textContent = 'Score';
-  finalScore.appendChild(gameScoreText);
-  
-  const gameScore = document.createElement('span');
-  gameScore.id = 'gameOverScore';
-  
+  const finalScore = document.createElement("div");
+  finalScore.className = "final-score";
+
+  const gameScore = document.createElement("span");
+  gameScore.id = "gameOverScore";
+
   if (total > 0) {
     gameScore.textContent = `${score} / ${total}`;
   } else {
@@ -479,39 +479,48 @@ function handleGameOver() {
       gameScore.textContent = `0 / 0`;
     }
   }
-  
+
   finalScore.appendChild(gameScore);
   headerSection.appendChild(finalScore);
-  
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      gameScore.classList.add("score-pulse");
+
+      gameScore.addEventListener(
+        "animationend",
+        () => {
+          gameScore.classList.remove("score-pulse");
+        },
+        { once: true }
+      );
+    }, 100);
+  });
+
   // Add win streak if applicable
   if (totalWins > 0) {
-    const winStreakContainer = document.createElement('div');
-    winStreakContainer.className = 'win-streak-container';
-    winStreakContainer.id = 'winStreakContainer';
-    
-    const star = document.createElement('span');
-    star.className = 'star';
-    star.textContent = '⭐️';
-    winStreakContainer.appendChild(star);
-    
-    const winCount = document.createElement('span');
-    winCount.id = 'winCount';
+    const winStreakContainer = document.createElement("div");
+    winStreakContainer.className = "win-streak-container";
+    winStreakContainer.id = "winStreakContainer";
+
+    const winCount = document.createElement("span");
+    winCount.id = "winCount";
     winCount.textContent = `Total Wins: ${totalWins}`;
     winStreakContainer.appendChild(winCount);
-    
+
     headerSection.appendChild(winStreakContainer);
   }
-  
+
   gameOverCard.appendChild(headerSection);
-  
+
   // Add achievements section
-  const achievementsContainer = document.createElement('div');
-  achievementsContainer.id = 'achievementsContainer';
-  achievementsContainer.className = 'achievements-container';
-  
+  const achievementsContainer = document.createElement("div");
+  achievementsContainer.id = "achievementsContainer";
+  achievementsContainer.className = "achievements-container";
+
   const unlockedAchievements = achievementManager.getUnlockedAchievements();
   const progress = achievementManager.getProgress();
-  
+
   if (unlockedAchievements.length === 0) {
     achievementsContainer.innerHTML = `
       <div class="achievements-title">Achievements (0%)</div>
@@ -528,7 +537,7 @@ function handleGameOver() {
       </div>
       <div class="achievements-grid">
     `;
-    
+
     unlockedAchievements.forEach((achievement) => {
       achievementsHTML += `
         <div class="achievement-badge" title="${achievement.title}: ${achievement.description}">
@@ -537,28 +546,31 @@ function handleGameOver() {
         </div>
       `;
     });
-    
+
     achievementsHTML += `</div>`;
     achievementsContainer.innerHTML = achievementsHTML;
   }
-  
+
+  const themeToggleContainer = createThemeToggle();
+
+  gameOverCard.appendChild(themeToggleContainer);
   gameOverCard.appendChild(achievementsContainer);
-  
-  const buttonsContainer = document.createElement('div');
-  buttonsContainer.className = 'game-over-buttons';
-  
-  const replayButton = document.createElement('button');
-  replayButton.id = 'replayButton';
-  replayButton.className = 'btn btn-primary';
-  replayButton.textContent = 'Play Again';
+
+  const buttonsContainer = document.createElement("div");
+  buttonsContainer.className = "game-over-buttons";
+
+  const replayButton = document.createElement("button");
+  replayButton.id = "replayButton";
+  replayButton.className = "btn btn-primary";
+  replayButton.textContent = "Play Again";
   replayButton.onclick = handleReplay;
   buttonsContainer.appendChild(replayButton);
-  
+
   if (navigator.share) {
-    const shareButton = document.createElement('button');
-    shareButton.id = 'shareButton';
-    shareButton.className = 'btn btn-secondary'; 
-    shareButton.textContent = 'Share';
+    const shareButton = document.createElement("button");
+    shareButton.id = "shareButton";
+    shareButton.className = "btn btn-secondary";
+    shareButton.textContent = "Share";
     shareButton.onclick = async () => {
       try {
         await navigator.share({
@@ -572,9 +584,9 @@ function handleGameOver() {
     };
     buttonsContainer.appendChild(shareButton);
   }
-  
+
   gameOverCard.appendChild(buttonsContainer);
-  
+
   isTransitioning = false;
 }
 
@@ -655,7 +667,7 @@ function updateAchievementsDisplay() {
 function queueAchievements(achievements) {
   // Add all achievements to the queue
   achievementQueue = achievementQueue.concat(achievements);
-  
+
   // If we're not currently displaying an achievement, start the process
   if (!isDisplayingAchievement) {
     displayNextAchievement();
@@ -667,24 +679,28 @@ function displayNextAchievement() {
     isDisplayingAchievement = false;
     return;
   }
-  
+
   isDisplayingAchievement = true;
   const achievement = achievementQueue.shift();
-  
+
   // Use half time if there are more achievements in the queue
-  const displayTime = achievementQueue.length > 0 ? 
-    MULTIPLE_ACHIEVEMENT_DISPLAY_TIME : 
-    ACHIEVEMENT_DISPLAY_TIME;
-    
+  const displayTime =
+    achievementQueue.length > 0
+      ? MULTIPLE_ACHIEVEMENT_DISPLAY_TIME
+      : ACHIEVEMENT_DISPLAY_TIME;
+
   displayAchievementNotification(achievement, displayTime);
-  
+
   // Schedule the next achievement display
   achievementToastTimeout = setTimeout(() => {
     displayNextAchievement();
   }, displayTime);
 }
 
-function displayAchievementNotification(achievement, displayTime = ACHIEVEMENT_DISPLAY_TIME) {
+function displayAchievementNotification(
+  achievement,
+  displayTime = ACHIEVEMENT_DISPLAY_TIME
+) {
   if (achievementToastTimeout) {
     clearTimeout(achievementToastTimeout);
   }
@@ -751,9 +767,82 @@ function addEventListeners() {
   window.addEventListener("pagehide", saveGameState);
 }
 
+function setupThemeListener() {
+  if (window.matchMedia) {
+    const darkModeMediaQuery = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    );
+
+    if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+      currentTheme = darkModeMediaQuery.matches ? "dark" : "light";
+      applyTheme(currentTheme);
+    }
+
+    darkModeMediaQuery.addEventListener("change", (e) => {
+      if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+        currentTheme = e.matches ? "dark" : "light";
+        applyTheme(currentTheme);
+
+        const themeToggle = document.getElementById("themeToggle");
+        if (themeToggle) {
+          themeToggle.classList.toggle("dark", currentTheme === "dark");
+        }
+
+        const themeLabel = document.querySelector(".theme-label");
+        if (themeLabel) {
+          themeLabel.innerHTML =
+            currentTheme === "light" ? "☀️ Light" : "🌙 Dark";
+        }
+      }
+    });
+  }
+}
+
+function createThemeToggle() {
+  const themeToggleContainer = document.createElement("div");
+  themeToggleContainer.className = "theme-toggle-container";
+
+  const themeLabel = document.createElement("span");
+  themeLabel.className = "theme-label";
+  themeLabel.innerHTML = currentTheme === "light" ? "☀️ Light" : "🌙 Dark";
+  themeToggleContainer.appendChild(themeLabel);
+
+  const themeToggle = document.createElement("div");
+  themeToggle.id = "themeToggle";
+  themeToggle.className = "theme-toggle";
+  if (currentTheme === "dark") {
+    themeToggle.classList.add("dark");
+  }
+  themeToggle.onclick = function () {
+    toggleTheme();
+    themeLabel.innerHTML = currentTheme === "light" ? "☀️ Light" : "🌙 Dark";
+  };
+  themeToggleContainer.appendChild(themeToggle);
+
+  return themeToggleContainer;
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === "light" ? "dark" : "light";
+  applyTheme(currentTheme);
+
+  localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+
+  const themeToggle = document.getElementById("themeToggle");
+  if (themeToggle) {
+    themeToggle.classList.toggle("dark", currentTheme === "dark");
+  }
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
 function initialize() {
   loadGameState();
   addEventListeners();
+  setupThemeListener();
+  applyTheme(currentTheme);
   achievementManager.checkAchievements();
   if (gameState.over) {
     handleGameOver();
