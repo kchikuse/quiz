@@ -259,7 +259,7 @@ const ACHIEVEMENTS = {
 
 // Wisdom titles based on win count
 const WISDOM_TITLES = {
-  0: "Novice",
+  0: "Apprentice Learner",
   1: "Seeker of Truth",
   5: "Discerner of Spirits",
   10: "Steward of Knowledge",
